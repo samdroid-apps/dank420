@@ -39,6 +39,7 @@ stdenv.mkDerivation rec {
     pytest
     jinja2 
     lookupy
+    watchdog
 
     # For the addons
     sass

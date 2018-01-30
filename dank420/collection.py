@@ -1,5 +1,7 @@
 import lookupy
 from lookupy.dunderkey import dunder_get
+import os
+import glob
 
 from . import view
 from . import util
@@ -70,11 +72,11 @@ class CollectionView():
 
     # This could actually be a bad idea; as some methods of the
     # parent view might iterate over the collection or something
-    #def __getattr__(self, name):
-    #    if self._parent is not None:
-    #        return getattr(self._parent, name)
-    #    else:
-    #        return super(self).__getattr__(name)
+    def __getattr__(self, name):
+        if self._parent is not None:
+            return getattr(self._parent, name)
+        else:
+            return super(self).__getattr__(name)
 
     def all(self):
         '''
@@ -198,3 +200,67 @@ class ItemPerPageView(view.View):
 
     def get_all_paths(self):
         return [self.get_path_for_item(item) for item in self.collection]
+
+    @classmethod
+    def on_registered(cls, site):
+        cls.collection.load()
+        cls.collection.register_reloader(site)
+
+
+class FileCollectionItem(Item):
+    '''
+    Customized item for use in a file collection.
+
+    Records the filename
+
+    Args:
+        fname (string): Filename that this object should load and represent
+        kwargs (dict): Should pass down to super
+
+    Superclasses **must** call `super().__init__(fname, **kwargs)`
+    '''
+
+    def __init__(self, fname, **kwargs):
+        super().__init__(**kwargs)
+        self.filename = fname
+
+
+class FileCollection(Collection):
+    '''
+    A collection that is backed by files that match the path glob
+
+    Attributes:
+        path (str): a glob path to find the files, for example `./posts/**`
+        Item (FileCollectionItem superclass): the class for the items
+
+    Note that this collection does not provide any ordering on the items.  It
+    can even changes as reloads happen.  You should use the `.sort` function
+    to get a sorted view of this collection.
+    '''
+    Item = FileCollectionItem
+
+    def __init__(self, **kwargs):
+        assert issubclass(self.Item, FileCollectionItem)
+        assert self.path
+
+        super(**kwargs)
+        self._items = []
+
+    def load(self):
+        self._items = []
+        for fname in glob.iglob(self.path):
+            self._items.append(self.Item(fname))
+
+    def register_reloader(self, site):
+        site.register_reload_callback(self._reload_cb, self.path)
+
+    def _reload_cb(self, path):
+        if not os.path.isfile(path):
+            return
+
+        self._items = [i for i in self._items if
+                os.path.abspath(i.filename) != os.path.abspath(path)]
+        self._items.append(self.Item(path))
+
+    def __iter__(self):
+        return iter(self._items)

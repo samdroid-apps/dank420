@@ -8,7 +8,7 @@
     <ul>
       {% for post in posts %}
         <li>
-          <a href="/blog/{{post.a}}">View post a={{post.a}}</a>
+          <a href="{{post.main_url}}">{{post.title}}</a>
         </li>
       {% endfor %}
     </ul>

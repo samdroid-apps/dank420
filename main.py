@@ -3,24 +3,27 @@
 from dank420 import Site, View, Pathspec
 from dank420 import static
 from dank420 import collection
+import glob
 import subprocess
+import frontmatter
 
 
 site = Site()
 
-class BasicCollection(collection.Collection):
-    class Item(collection.Item):
-        pass
+class PostsCollection(collection.FileCollection):
+    path = './posts/**.md'
 
-    def load(self):
-        pass
+    class Item(collection.FileCollectionItem):
+        def __init__(self, fname):
+            post = frontmatter.load(fname)
+            super().__init__(fname, content=post.content, **post.metadata)
 
-    def __iter__(self):
-        return iter([
-            self.Item(a=10, b=2), self.Item(a=20, b=1), self.Item(a=30, b=3)])
+        @property
+        def main_url(self):
+            return f'/blog/{self.order}'
 
 
-posts = BasicCollection()
+posts = PostsCollection().sort('order')
 
 
 @site.register
@@ -41,7 +44,7 @@ class BlogPostView(collection.ItemPerPageView):
         return request.site.templates.render('post.html', post=item)
 
     def get_path_for_item(self, item):
-        return f'/blog/{item.a}'
+        return item.main_url
 
 
 @site.register

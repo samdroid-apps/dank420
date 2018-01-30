@@ -4,6 +4,9 @@ import sys
 import shutil
 import argparse
 from pprint import pprint
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import fnmatch
 
 from .view import View
 from .pathspec import Pathspec
@@ -19,9 +22,25 @@ class Site():
     Object representing a site (styles off flask's App)
     '''
 
+    class _WatchDogHandler(FileSystemEventHandler):
+        def __init__(self):
+            self.callbacks = []
+
+        def on_any_event(self, event):
+            # FIXME: this is probably broken for move events
+            path = event.src_path
+            for cb, pattern in self.callbacks:
+                if fnmatch.fnmatch(path, pattern):
+                    cb(path)
+
     def __init__(self):
         self.router = Router()
         self.templates = Templates(self)
+
+        self._watchdog_handler = self._WatchDogHandler()
+        observer = Observer()
+        observer.schedule(self._watchdog_handler, path='.', recursive=True)
+        observer.start()
 
     def register(self, handler):
         '''
@@ -103,3 +122,6 @@ class Site():
             outdir = args.outdir
             assert outdir
             self.build(outdir, force=args.force)
+
+    def register_reload_callback(self, fn, path):
+        self._watchdog_handler.callbacks.append((fn, path))
