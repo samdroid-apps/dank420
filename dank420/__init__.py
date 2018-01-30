@@ -12,7 +12,6 @@ from .router import Router
 from .response import Response, force_response
 from .devserver import run_dev_server
 from .templates import Templates
-from .static import StaticView
 
 
 class Site():

@@ -4,5 +4,13 @@
   </head>
   <body>
     <h1>Welcome to my site 222</h1>
+
+    <ul>
+      {% for post in posts %}
+        <li>
+          <a href="/blog/{{post.a}}">View post a={{post.a}}</a>
+        </li>
+      {% endfor %}
+    </ul>
   </body>
 </html}>
