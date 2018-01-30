@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from dank420 import Site, View, Pathspec, StaticView
 import subprocess
 

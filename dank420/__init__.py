@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import shutil
+import argparse
 from pprint import pprint
 
 from .view import View
@@ -42,7 +43,7 @@ class Site():
         handler.on_registered(self)
         self.router.add(handler)
 
-    def run(self, host='127.0.0.1', port=5000):
+    def run(self, host, port):
         run_dev_server(self, host, port)
 
     def build(self, outdir, force=False):
@@ -72,28 +73,34 @@ class Site():
                     f.write(resp.data)
 
     def cli(self):
-        # If I get internet access I should change this
-        # to use a proper library
-        if len(sys.argv) == 1:
-            return self._print_help()
+        parser = argparse.ArgumentParser()
+        subcommands = parser.add_subparsers(dest='subcommand_name')
+        run_parser = subcommands.add_parser('run',
+                help='Serve the site on a development server')
+        run_parser.add_argument('--port', default=5000, type=int,
+                help='Port to run dev server on')
+        run_parser.add_argument('--host', default='127.0.0.1',
+                help='Host to run dev server on')
+        paths_parser = subcommands.add_parser('paths',
+                help='Print all paths handled by each handler')
+        build_parser = subcommands.add_parser('build',
+                help='Build the site into a static folder')
+        build_parser.add_argument('outdir',
+                help='Directory to write the static site into')
+        build_parser.add_argument('--force', dest='force', action='store_true',
+                help=('If --force is used and outdir exists, '
+                      'outdir will be deleted prior to building'))
 
-        command = sys.argv[1]
-        if command == 'run':
-            self.run()
-        elif command == 'paths':
+        argv = sys.argv[1:]
+        if len(argv) == 0:
+            argv = ['-h']
+        args = parser.parse_args(argv)
+
+        if args.subcommand_name == 'run':
+            self.run(port=args.port, host=args.host)
+        elif args.subcommand_name == 'paths':
             self.router.print_debug()
-        elif command == 'build':
-            outdir = sys.argv[2]
+        elif args.subcommand_name == 'build':
+            outdir = args.outdir
             assert outdir
-            self.build(outdir, force='--force' in sys.argv)
-        else:
-            return self._print_help()
-
-    def _print_help(self):
-        print(f'Usage: {sys.argv[0]} command')
-        print()
-        print(f'Commands:')
-        print(f'  build outdir - Build the site and puts it into outdir')
-        print(f'  paths - Print all paths')
-        print(f'  run - Runs development server')
-        print(f'  help - Prints this message')
+            self.build(outdir, force=args.force)
