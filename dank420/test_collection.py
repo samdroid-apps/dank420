@@ -1,7 +1,7 @@
 import pytest
 
 from .request import Request
-from .collection import Collection, Item, CollectionPerPageView
+from .collection import Collection, Item, ItemPerPageView
 
 def test_collection_raises():
     c = Collection()
@@ -86,8 +86,8 @@ def test_collections_filter_sort():
     assert items[1].a == 30
 
 
-def test_collection_per_page_view():
-    class View(CollectionPerPageView):
+def test_item_per_page_view():
+    class View(ItemPerPageView):
         collection = BasicCollection()
 
         def get_path_for_item(self, item):
