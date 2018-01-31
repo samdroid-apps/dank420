@@ -1,52 +1,42 @@
 import sys
 import http.server
+from werkzeug import wrappers
+from werkzeug import serving
 
 from .response import force_response, Response
 from .request import Request
 
 
-class _DevServerHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
-    # subclassed by the caller site
-    site = None
+class DevServer():
+    def __init__(self, site):
+        self.site = site
 
-    def dispatch(self):
-        handler = self.site.router.find(self.path)
+    @wrappers.Request.application
+    def wsgi_app(self, request):
+        if request.method not in ['HEAD', 'GET']:
+            return wrappers.Response(b'Method not allowed', status=405)
+
+        path = request.path
+        response, status = self.dispatch(path)
+        return wrappers.Response(
+                response.data,
+                status=status,
+                mimetype=response.content_type)
+
+    def dispatch(self, path: str) -> Response:
+        handler = self.site.router.find(path)
         if handler is None:
-            return Response(b'404 no matching handler'), 404
+            return Response(b'404 no matching handler; use the `paths` subcommand to debug'), 404
         else:
-            request = Request(self.path, self.site)
+            request = Request(path, self.site)
             resp = force_response(handler.dispatch(request))
             return resp, 200
-        return Response(b'500 rip'), 500
-
-    def do_GET(self):
-        resp, code = self.dispatch()
-        self.send_head(resp, code)
-        self.wfile.write(resp.data)
-
-    def do_HEAD(self):
-        resp, code = self.dispatch()
-        self.send_head(resp, code)
-
-    def send_head(self, resp, code):
-        self.send_response(code)
-        self.send_header("Content-type", resp.content_type)
-        self.send_header("Content-Length", len(resp.data))
-        # self.send_header("Last-Modified", self.date_time_string(fs.st_mtime))
-        self.end_headers()
 
 
 def run_dev_server(my_site, host, port):
-    class Handler(_DevServerHTTPRequestHandler):
-        site = my_site
+    app = DevServer(my_site)
 
-    addr = (host, port)
-    with http.server.HTTPServer(addr, Handler) as httpd:
-        sa = httpd.socket.getsockname()
-        serve_message = "Serving HTTP on {host} port {port} (http://{host}:{port}/) ..."
-        print(serve_message.format(host=sa[0], port=sa[1]))
-        try:
-            httpd.serve_forever()
-        except KeyboardInterrupt:
-            print("\nKeyboard interrupt received, exiting.")
-            sys.exit(0)
+    serving.run_simple(
+        host, port, app.wsgi_app,
+        use_debugger=True,
+        use_reloader=True)

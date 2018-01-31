@@ -40,6 +40,7 @@ stdenv.mkDerivation rec {
     jinja2 
     lookupy
     watchdog
+    werkzeug
 
     # For the example
     sass
