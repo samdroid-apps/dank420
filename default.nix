@@ -41,9 +41,11 @@ stdenv.mkDerivation rec {
     lookupy
     watchdog
 
-    # For the addons
+    # For the example
     sass
     python-frontmatter
+    markdown
+    pygments
   ];
 
   shellHook =

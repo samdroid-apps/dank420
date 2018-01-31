@@ -3,12 +3,60 @@
 from dank420 import Site, View, Pathspec
 from dank420 import static
 from dank420 import collection
-import glob
+from dank420 import util
+import re
+import markdown
+import pygments
+import pygments.formatters
+import pygments.lexers
 import subprocess
 import frontmatter
 
 
 site = Site()
+
+class CodeBlockPreprocessor(markdown.preprocessors.Preprocessor):
+    """
+    Adapted from:
+    https://bitbucket.org/birkenfeld/pygments-main/ \
+        src/e79a7126551c39d5f8c1b83a79c14e86992155a4/external/markdown-processor.py
+
+    Later adapted from:
+    https://github.com/grow/grow/blob/0.3.7/grow/common/markdown_extensions.py#L130-L198
+    """
+    KIND = 'sourcecode'
+    pattern_ticks = re.compile(r'```(?P<lang>.*?)\n(?P<content>.+?)\n```', re.S)
+
+    def __init__(self, markdown_instance):
+        self.markdown = markdown_instance
+        self.formatter = pygments.formatters.HtmlFormatter(noclasses=True)
+
+    def run(self, lines):
+        class_name = 'code'
+
+        def repl(match):
+            language = match.group('lang')
+            if not language:
+                language = 'text'
+
+            content = match.group('content')
+            lexer = pygments.lexers.get_lexer_by_name(language)
+            code = pygments.highlight(content, lexer, self.formatter)
+            return f'\n\n<div class="{class_name}">{code}</div>\n\n'
+
+        content = '\n'.join(lines)
+        content = self.pattern_ticks.sub(repl, content)
+        return content.split('\n')
+
+
+class CodeBlockExtension(markdown.extensions.Extension):
+    def extendMarkdown(self, md, md_globals):
+        md.registerExtension(self)
+        self.processor = CodeBlockPreprocessor(md)
+        self.processor.md = md
+        md.preprocessors.add('sourcecode', self.processor, '_begin')
+
+markdown_ctx = markdown.Markdown(extensions=[CodeBlockExtension()])
 
 class PostsCollection(collection.FileCollection):
     path = './posts/**.md'
@@ -20,7 +68,15 @@ class PostsCollection(collection.FileCollection):
 
         @property
         def main_url(self):
-            return f'/blog/{self.order}'
+            if hasattr(self, 'url'):
+                return self.url
+            else:
+                slug = util.slugify_grow(self.title)
+                return f'/blog/{slug}'
+
+        @property
+        def html(self):
+            return markdown_ctx.convert(self.content)
 
 
 posts = PostsCollection().sort('order')
