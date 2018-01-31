@@ -61,9 +61,6 @@ class Site():
         handler.on_registered(self)
         self.router.add(handler)
 
-    def run(self, host, port):
-        run_dev_server(self, host, port)
-
     def build(self, outdir, force=False):
         if os.path.exists(outdir):
             if force:
@@ -99,6 +96,8 @@ class Site():
                 help='Port to run dev server on')
         run_parser.add_argument('--host', default='127.0.0.1',
                 help='Host to run dev server on')
+        run_parser.add_argument('--profile', dest='profile', action='store_true',
+                help='Enable the Werkzeug profiler')
         paths_parser = subcommands.add_parser('paths',
                 help='Print all paths handled by each handler')
         build_parser = subcommands.add_parser('build',
@@ -115,7 +114,10 @@ class Site():
         args = parser.parse_args(argv)
 
         if args.subcommand_name == 'run':
-            self.run(port=args.port, host=args.host)
+            run_dev_server(self,
+                    port=args.port,
+                    host=args.host,
+                    profile=args.profile)
         elif args.subcommand_name == 'paths':
             self.router.print_debug()
         elif args.subcommand_name == 'build':

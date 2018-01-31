@@ -2,6 +2,7 @@ import sys
 import http.server
 from werkzeug import wrappers
 from werkzeug import serving
+from werkzeug.contrib.profiler import ProfilerMiddleware
 
 from .response import force_response, Response
 from .request import Request
@@ -33,10 +34,13 @@ class DevServer():
             return resp, 200
 
 
-def run_dev_server(my_site, host, port):
-    app = DevServer(my_site)
+def run_dev_server(my_site, host, port, profile=False):
+    app = DevServer(my_site).wsgi_app
+
+    if profile:
+        app = ProfilerMiddleware(app)
 
     serving.run_simple(
-        host, port, app.wsgi_app,
+        host, port, app,
         use_debugger=True,
         use_reloader=True)
