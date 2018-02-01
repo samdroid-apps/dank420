@@ -36,4 +36,6 @@ class Templates():
         template = self.environment.get_template(name, globals=self._get_globals())
         return template.render(*args, **kwargs)
 
-
+    def render_string(self, string, *args, **kwargs):
+        template = self.environment.from_string(string, globals=self._get_globals())
+        return template.render(*args, **kwargs)
