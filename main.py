@@ -9,8 +9,8 @@ import markdown
 import pygments
 import pygments.formatters
 import pygments.lexers
-import subprocess
 import frontmatter
+import scss
 
 
 site = Site()
@@ -111,7 +111,8 @@ class MyStaticView(static.StaticView):
 
     def read_path(self, path):
         if path.endswith('.scss'):
-            return subprocess.check_output(['scss', path])
+            data = scss.compiler.compile_file(path)
+            return data.encode()
         else:
             return super().read_path(path)
 
