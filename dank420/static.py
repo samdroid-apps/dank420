@@ -1,6 +1,7 @@
 import os
 import hashlib
 import glob
+import mimetypes
 
 from .pathspec import Pathspec
 from .view import View
@@ -76,7 +77,7 @@ class StaticView(View):
     base = 'static'
     pathspec = Pathspec('/static/<*name>')
 
-    def read_path(self, path):
+    def read_path(self, path: str) -> bytes:
         '''
         Read a given file path, returning the data as bytes
 
@@ -85,15 +86,31 @@ class StaticView(View):
         with open(path, 'rb') as f:
             return f.read()
 
-    @classmethod
-    def on_registered(cls, site):
-        site.templates.register_filter(cls.template_filter_name, cls.template_filter)
+    def get_content_type(self, path: str) -> str:
+        '''
+        Get the content type of a given path
+
+        Returns:
+            str, a mime type (eg. text/plain)
+        '''
+        type_, encoding = mimetypes.guess_type(path)
+        return type_ or 'text/plain'
+
 
     @classmethod
-    def template_filter(cls, filename):
+    def on_registered(cls, site):
+        site.templates.register_filter(cls.template_filter_name, cls.filename_to_path)
+
+    @classmethod
+    def filename_to_path(cls, filename: str) -> str:
+        '''
+        Convert a given filename to a URL path (for use in the site)
+
+        It adds the hash of the filename into the path
+        '''
         self = cls()
         local_path = os.path.join(self.base, filename)
-        hash_ = _get_hash(self.read_path(local_path))
+        hash_ = self._hash_fp(local_path)
         return self.pathspec.format(name=_insert_hash(filename, hash_))
 
     def dispatch(self, request):
@@ -101,7 +118,7 @@ class StaticView(View):
         path, hash_ = _extract_hash(name)
         fp = os.path.join(self.base, path)
         data = self.read_path(fp)
-        return Response(data, content_type='text/plain')
+        return Response(data, content_type=self.get_content_type(request.path))
 
     def _hash_fp(self, fp):
         return _get_hash(self.read_path(fp))

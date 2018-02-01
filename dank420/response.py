@@ -39,7 +39,7 @@ class Response():
         if not isinstance(data, bytes):
             raise ValueError(f'Data must be bytes; got {data}')
         self.data = data
-        self.content_type = 'text/html'
+        self.content_type = content_type
 
     @property
     def is_html(self):
