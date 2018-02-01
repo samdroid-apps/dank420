@@ -191,7 +191,7 @@ class ItemPerPageView(view.View):
         Raises:
             ValueError if request is insane
         '''
-        path = request.path
+        path = util.normalize_path(request.path)
         for item in self.collection:
             ipath = util.normalize_path(self.get_path_for_item(item))
             if ipath == path:

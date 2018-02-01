@@ -1,3 +1,5 @@
+from .util import normalize_path
+
 class View():
     '''
     A view is something that renders paths in your site
@@ -53,4 +55,4 @@ class View():
 
         You can implement something that is faster
         '''
-        return path in self.get_all_paths()
+        return path in map(normalize_path, self.get_all_paths())

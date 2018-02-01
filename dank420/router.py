@@ -28,7 +28,7 @@ class Router():
             print('Handler: ', HandlerClass)
             handler = HandlerClass()
             for path in handler.get_all_paths():
-                print(' -', path)
+                print(' -', normalize_path(path))
 
     def all(self):
         for HandlerClass in self._all:
