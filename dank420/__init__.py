@@ -60,6 +60,7 @@ class Site():
         #    handler = WrappedView
         handler.on_registered(self)
         self.router.add(handler)
+        return handler
 
     def build(self, outdir, force=False):
         if os.path.exists(outdir):
