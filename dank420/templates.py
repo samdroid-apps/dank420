@@ -17,6 +17,11 @@ class Templates():
         self._site = site
         self.environment = jinja2.Environment(
             loader=jinja2.FileSystemLoader('./templates'))
+        # Disable cache as it caches results of the StaticView's
+        # template filter.  This results in files not loading,
+        # as they have outdated hashes.
+        # FIXME: re-enable the cache
+        self.environment.cache = None
 
     def _get_globals(self):
         return {}
