@@ -249,7 +249,10 @@ class FileCollection(Collection):
     def load(self):
         self._items = []
         for fname in glob.iglob(self.path):
-            self._items.append(self.Item(fname))
+            try:
+                self._items.append(self.Item(fname))
+            except DoNotLoadException:
+                pass
 
     def register_reloader(self, site):
         site.register_reload_callback(self._reload_cb, self.path)
@@ -260,7 +263,20 @@ class FileCollection(Collection):
 
         self._items = [i for i in self._items if
                 os.path.abspath(i.filename) != os.path.abspath(path)]
-        self._items.append(self.Item(path))
+        try:
+            self._items.append(self.Item(path))
+        except DoNotLoadException:
+            pass
 
     def __iter__(self):
         return iter(self._items)
+
+
+class DoNotLoadException(Exception):
+    '''
+    Raise this during the FileCollectionItem construction if you wish for the
+    item to not be loaded.
+
+    This could be used to stop drafts from being loaded, for example.
+    '''
+    pass

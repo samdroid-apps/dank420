@@ -1,7 +1,9 @@
 import pytest
+import tempfile
 
 from .request import Request
-from .collection import Collection, Item, ItemPerPageView
+from .collection import (Collection, Item, ItemPerPageView,
+        FileCollection, FileCollectionItem, DoNotLoadException)
 
 def test_collection_raises():
     c = Collection()
@@ -103,3 +105,58 @@ def test_item_per_page_view():
 
     with pytest.raises(ValueError):
         item = v.get_item_for_request(Request('/c/50', None))
+
+def test_file_collection():
+    with tempfile.TemporaryDirectory() as dirname:
+        with open(f'{dirname}/A', 'w') as f:
+            f.write('A')
+        with open(f'{dirname}/B', 'w') as f:
+            f.write('B')
+
+        class MyFileCollectionItem(FileCollectionItem):
+            def __init__(self, fname):
+                with open(fname, 'r') as f:
+                    char = f.read().strip()
+
+                super().__init__(fname, char=char)
+
+        class MyFileCollection(FileCollection):
+            path = f'{dirname}/*'
+            Item = MyFileCollectionItem
+
+        c = MyFileCollection().sort('char')
+        c.load()
+
+        l = list(c)
+        assert len(l) == 2
+        assert l[0].char == 'A'
+        assert l[1].char == 'B'
+
+
+def test_file_collection_with_do_not_load():
+    with tempfile.TemporaryDirectory() as dirname:
+        with open(f'{dirname}/A', 'w') as f:
+            f.write('A')
+        with open(f'{dirname}/B', 'w') as f:
+            f.write('B')
+
+        class MyFileCollectionItem(FileCollectionItem):
+            def __init__(self, fname):
+                with open(fname, 'r') as f:
+                    char = f.read().strip()
+
+                if char == 'B':
+                    raise DoNotLoadException
+
+                super().__init__(fname, char=char)
+
+        class MyFileCollection(FileCollection):
+            path = f'{dirname}/*'
+            Item = MyFileCollectionItem
+
+        c = MyFileCollection()
+        c.load()
+
+        l = list(c)
+        assert len(l) == 1
+        assert l[0].char == 'A'
