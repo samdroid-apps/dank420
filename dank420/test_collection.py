@@ -132,7 +132,6 @@ def test_file_collection():
         assert l[0].char == 'A'
         assert l[1].char == 'B'
 
-
 def test_file_collection_with_do_not_load():
     with tempfile.TemporaryDirectory() as dirname:
         with open(f'{dirname}/A', 'w') as f:
@@ -160,3 +159,37 @@ def test_file_collection_with_do_not_load():
         l = list(c)
         assert len(l) == 1
         assert l[0].char == 'A'
+
+def test_file_collection_reload():
+    with tempfile.TemporaryDirectory() as dirname:
+        with open(f'{dirname}/A', 'w') as f:
+            f.write('A')
+        with open(f'{dirname}/B', 'w') as f:
+            f.write('B')
+
+        class MyFileCollectionItem(FileCollectionItem):
+            def __init__(self, fname):
+                with open(fname, 'r') as f:
+                    char = f.read().strip()
+
+                super().__init__(fname, char=char)
+
+        class MyFileCollection(FileCollection):
+            path = f'{dirname}/*'
+            Item = MyFileCollectionItem
+
+        c = MyFileCollection().sort('char')
+        c.load()
+
+        l = list(c)
+        assert len(l) == 2
+        assert l[0].char == 'A'
+        assert l[1].char == 'B'
+
+        with open(f'{dirname}/A', 'w') as f:
+            f.write('C')
+        c._reload_cb(f'{dirname}/A')
+        l = list(c)
+        assert len(l) == 2
+        assert l[0].char == 'B'
+        assert l[1].char == 'C'
